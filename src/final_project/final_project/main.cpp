@@ -10,14 +10,17 @@
 #include <cstdlib>
 #include <vector>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+//#define STB_IMAGE_IMPLEMENTATION
+//#include "stb_image.h"
 
 #include "shader.h"
 #include "camera.h"
 //#include "waves.h"
+#include "model.h"
 
 using namespace std;
+
+const string modelBasePath = "E:\\资料\\大三下\\计算机图形学\\CGFinalProject\\CGFinalProject\\model\\";
 
 std::vector<float>* init_height_map(unsigned char* data, float width, float height, float chan, float rec_width) {
 	(void)height;
@@ -292,11 +295,15 @@ int main(void)
 	shader_sand.use();
 	shader_sand.setInt("TexSand", 1);
 
+	Shader ourShader("vertex_model.glsl", "frag_model.glsl");
+	//Model ourModel(modelBasePath + "tree\\file.obj");
+	Model ourModel(modelBasePath + "palm/Palm.obj");
+
 	while (!glfwWindowShouldClose(window))
 	{
 		processInput(window);
 
-		glClearColor(0.2f, 0.3f, 0.3f, 0.0f);
+		glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glActiveTexture(GL_TEXTURE0);
@@ -305,6 +312,8 @@ int main(void)
 		glBindTexture(GL_TEXTURE_2D, texture_sand);
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, texture_cubemap);
+
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 		/* Sand */
 		shader_sand.use();
@@ -336,6 +345,23 @@ int main(void)
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 		glBindVertexArray(0);
 		glDepthFunc(GL_LESS);
+
+
+		ourShader.use();
+
+		// view/projection transformations
+		glm::mat4 projection = glm::perspective(glm::radians(camera->Zoom), (float)SRC_WIDTH / (float)SRC_HEIGHT, 0.1f, 100.0f);
+		glm::mat4 view = camera->GetViewMatrix();
+		ourShader.setMat4("projection", projection);
+		ourShader.setMat4("view", view);
+		//ourShader.updateView(fov, SRC_WIDTH, SRC_HEIGHT, camera->GetViewMatrix(), false);
+
+		// render the loaded model
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(10.0f, 3.0f, 20.0f)); // translate it down so it's at the center of the scene
+		//model = glm::scale(model, glm::vec3(5.2f, 5.2f, 5.2f));	// it's a bit too big for our scene, so scale it down
+		ourShader.setMat4("model", model);
+		ourModel.Draw(ourShader);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
