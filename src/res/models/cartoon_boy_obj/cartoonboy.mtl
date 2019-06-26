@@ -1,0 +1,61 @@
+newmtl Eye_matSG
+illum 4
+Kd 0.00 0.00 0.00
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+map_Kd eye_map.jpg
+Ni 1.00
+Ks 0.50 0.50 0.50
+newmtl cloths_matSG
+illum 4
+Kd 0.00 0.00 0.00
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+map_Kd cloths.jpg
+bump cloth_normals.jpg -bm 1
+Ni 1.00
+newmtl hairSG
+illum 4
+Kd 0.12 0.12 0.12
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+Ni 1.00
+newmtl hat:Hat_matSG
+illum 4
+Kd 0.00 0.00 0.00
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+map_Kd hat_map.jpg
+Ni 1.00
+newmtl reflectorsSG
+illum 4
+Kd 1.00 1.00 1.00
+Ka 0.94 0.94 0.94
+Tf 1.00 1.00 1.00
+Ni 1.00
+newmtl skin_matSG
+illum 4
+Kd 0.00 0.00 0.00
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+map_Kd Body_paint.jpg
+Ni 1.00
+newmtl tongue:mouthSG
+illum 4
+Kd 0.00 0.00 0.00
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+map_Kd mouth_map.jpg
+Ni 1.00
+newmtl tongue:tongue_mateSG
+illum 4
+Kd 0.88 0.43 0.43
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+Ni 1.00
+newmtl useBackground1SG
+illum 4
+Kd 0.00 0.00 0.00
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+Ni 0.00
