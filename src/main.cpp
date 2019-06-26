@@ -17,6 +17,7 @@
 #include "shadow.h"
 #include "snow.h"
 #include "character.cpp"
+#include "model.h"
 
 #include <iostream>
 #include <vector>
@@ -47,6 +48,7 @@ float lastFrame = 0.0f;
 float lastX, lastY;
 bool firstMouse = true;
 bool ssnow = false;
+bool playerMove = false;
 
 int main()
 {
@@ -115,7 +117,10 @@ int main()
 	Snow::Snow snow;
 	character chter;
 
-	
+	Shader modelShader = ResourceManager::LoadShader("shaders/model/vs_model.glsl", "shaders/model/fs_model.glsl", nullptr, "modelShader");
+  Model house("res/models/house/house.obj");
+  Model tree("res/models/201082874427109/tree.obj");
+  Model boy("res/models/cartoon_boy_obj/boy.obj");
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -189,6 +194,59 @@ int main()
 		skybox.drawSkyBox(skyboxView);
 
 		snow.Render(deltaTime, model, view, projection);
+
+    // load model
+    modelShader.use();
+
+    modelShader.SetVector3f("light.position", lightPos);
+    modelShader.SetVector3f("viewPos", camera.position);
+
+    // light properties
+    modelShader.SetVector3f("light.ambient", 0.2f, 0.2f, 0.2f);
+    modelShader.SetVector3f("light.diffuse", 0.5f, 0.5f, 0.5f);
+    modelShader.SetVector3f("light.specular", 1.0f, 1.0f, 1.0f);
+    modelShader.SetFloat("light.constant", 1.0f);
+    modelShader.SetFloat("light.linear", 0.09f);
+    modelShader.SetFloat("light.quadratic", 0.032f);
+    // material properties
+    modelShader.SetFloat("light.shininess", 32.0f);
+
+    // view/projection transformations
+    glm::mat4 projection2 = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
+    glm::mat4 view2 = camera.getViewMatrix();
+    modelShader.SetMatrix4("projection", projection2);
+    modelShader.SetMatrix4("view", view2);
+    //modelShader.updateView(fov, SRC_WIDTH, SRC_HEIGHT, camera->GetViewMatrix(), false);
+
+    // render the loaded model
+    glm::mat4 model2 = glm::mat4(1.0f);
+    model2 = glm::translate(model2, glm::vec3(0.0f, 3.8f, 0.0f)); // translate it down so it's at the center of the scene
+    model2 = glm::scale(model2, glm::vec3(0.04f, 0.04f, 0.04f));  // it's a bit too big for our scene, so scale it down
+    modelShader.SetMatrix4("model", model2);
+    house.Draw(modelShader);
+
+    model2 = glm::mat4(1.0f);
+    model2 = glm::translate(model2, glm::vec3(10.0f, 1.8f, 5.0f)); // translate it down so it's at the center of the scene
+    model2 = glm::scale(model2, glm::vec3(0.0015f, 0.0015f, 0.0015f));  // it's a bit too big for our scene, so scale it down
+    modelShader.SetMatrix4("model", model2);
+    tree.Draw(modelShader);
+
+    model2 = glm::mat4(1.0f);
+
+    if (playerMove) {
+      float radius = 10.0f;
+      float camX = sin(glfwGetTime()) * radius;
+      float camZ = cos(glfwGetTime()) * radius;
+      model2 = glm::translate(model2, glm::vec3(camX, 5.8f, camZ));
+    }
+    else {
+      model2 = glm::translate(model2, glm::vec3(20.0f, 5.8f, 0.0f)); // translate it down so it's at the center of the scene
+
+    }
+    model2 = glm::scale(model2, glm::vec3(0.03f, 0.03f, 0.03f));  // it's a bit too big for our scene, so scale it down
+    modelShader.SetMatrix4("model", model2);
+    boy.Draw(modelShader);
+    
 	
 
 
