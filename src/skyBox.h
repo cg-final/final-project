@@ -118,6 +118,7 @@ public:
 	}
 
 	void drawSkyBox(glm::mat4 camera_view);
+	void drawsunSkyBox(glm::mat4 camera_view);
 };
 
 #endif
