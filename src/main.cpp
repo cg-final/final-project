@@ -16,22 +16,29 @@
 #include "water.h"
 #include "shadow.h"
 #include "snow.h"
+#include "character.cpp"
 
 #include <iostream>
 #include <vector>
-#include <string.h>
+#include <string>
+
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
+const char* glsl_version = "#version 130";
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
+
 void drawQuad();
 void renderCube();
-//void initSnow(Snow& snow);
-//void drawSnow(Snow& snow, glm::mat4 view, glm::mat4 projection, float deltaTime);
 
 Camera camera(glm::vec3(0.0, 10.0, 10.0), glm::vec3(0.0, 1.0, 0.0));
 
@@ -39,6 +46,7 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 float lastX, lastY;
 bool firstMouse = true;
+bool ssnow = false;
 
 int main()
 {
@@ -66,10 +74,21 @@ int main()
 		std::cout << "Failed to initialize GLAD" << std::endl;
 		return -1;
 	}
+	glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	(void)io;
+	ImGui::StyleColorsDark();
+
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init(glsl_version);
 
 	//glEnable(GL_MULTISAMPLE);
 	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_CLIP_DISTANCE0);
+	
 
 	Water water;
 	water.initWater(1000, 0.0);
@@ -82,7 +101,7 @@ int main()
 	skybox.initSkyBox();
 	skybox.loadCubeMap();
 
-	glm::vec3 lightColor = glm::vec3(1.0);
+	glm::vec3 lightColor = glm::vec3(0.0);
 	glm::vec3 lightPos = glm::vec3(30.0, 30.0, -30.0);
 	glm::vec3 lightDir = glm::vec3(-1.0, 1.0, -1.0);
 	Shader lightBoxShader = ResourceManager::LoadShader("shaders/lightandshadow/vs_lightBox.glsl", "shaders/lightandshadow/fs_lightBox.glsl", nullptr, "lightBoxShader");
@@ -94,6 +113,9 @@ int main()
 	shadowDebugShader.SetInteger("depthMap", 0);
 
 	Snow::Snow snow;
+	character chter;
+
+	
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -104,6 +126,7 @@ int main()
 		processInput(window);
 
 		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+
 
 		glm::mat4 model = glm::mat4(1.0f);
 		glm::mat4 view = camera.getViewMatrix();
@@ -157,12 +180,7 @@ int main()
 		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		/*glm::mat4 projection1(1.0f);
-		glm::mat4 model1(1.0f);
-		glm::mat4 view1 = camera.getViewMatrix();
-		projection1 = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 2000.f);
-		//floor.render(model,view,projection);
-		snow.Render(deltaTime, model1, view1, projection1);*/
+		
 
 		water.drawOcean(view, projection, glfwGetTime(), lightSpaceMatrix, shadow.depthMap, lightDir, lightColor, camera.position);
 
@@ -170,7 +188,17 @@ int main()
 
 		skybox.drawSkyBox(skyboxView);
 
-		
+		snow.Render(deltaTime, model, view, projection);
+	
+
+
+		string s = to_string(1.0 / deltaTime);
+		s = "fps: " + s;
+
+		//glEnable(GL_CULL_FACE);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		chter.RenderText(s, 50.0f, 670.0f, 0.5f, glm::vec3(0.1f, 0.1f, 0.1f));
 
 		glfwPollEvents();
 		glfwSwapBuffers(window);
@@ -199,6 +227,10 @@ void processInput(GLFWwindow* window)
 		camera.moveBack(deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 		camera.moveLeft(deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS)
+		ssnow = true;
+	if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS)
+		ssnow = false;
 }
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
@@ -324,4 +356,6 @@ void renderCube()
 	glDrawArrays(GL_TRIANGLES, 0, 36);
 	glBindVertexArray(0);
 }
+
+	
 
