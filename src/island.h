@@ -22,7 +22,7 @@ public:
 
 	Island(glm::vec3 pos, glm::vec3 size) : Position(pos), Size(size) {
 		int nrChannels;
-		unsigned char* image = stbi_load("res/images/island/island.jpg", &width, &height, &nrChannels, 0);
+		unsigned char* image = stbi_load("res/images/island.jpg", &width, &height, &nrChannels, 0);
 		m_vertexs.clear();
 		m_normals.clear();
 		m_textures.clear();
@@ -91,8 +91,6 @@ public:
 			m_total.push_back(m_normals[i]);
 			m_total.push_back(m_textures[i]);
 		}
-
-		std::cout << m_total.size() << std::endl;
 
 		glGenVertexArrays(1, &VAO);
 		glGenBuffers(1, &VBO);
