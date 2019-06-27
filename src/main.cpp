@@ -40,8 +40,9 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
 void drawQuad();
 void renderCube();
+void drawDepthShader(glm::mat4 lightSpaceMatrix, Shader& depthShader, vector<Model> v);
 
-Camera camera(glm::vec3(0.0, 10.0, 10.0), glm::vec3(0.0, 1.0, 0.0));
+Camera camera(glm::vec3(0.0, 10.0, 30.0), glm::vec3(0.0, 1.0, 0.0));
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -56,6 +57,7 @@ int main()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_SAMPLES, 4);
 
 	//glfwWindowHint(GLFW_SAMPLES, 4);
 
@@ -86,11 +88,12 @@ int main()
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init(glsl_version);
 
-	//glEnable(GL_MULTISAMPLE);
+	
+	glEnable(GL_MULTISAMPLE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_CLIP_DISTANCE0);
-	
+
 
 	Water water;
 	water.initWater(1000, 0.0);
@@ -103,9 +106,9 @@ int main()
 	skybox.initSkyBox();
 	skybox.loadCubeMap();
 
-	glm::vec3 lightColor = glm::vec3(0.0);
-	glm::vec3 lightPos = glm::vec3(30.0, 30.0, -30.0);
-	glm::vec3 lightDir = glm::vec3(-1.0, 1.0, -1.0);
+	glm::vec3 lightColor(1.0f);
+	glm::vec3 lightPos = glm::vec3(-3.0f, 18.0f, -13.0f);
+	glm::vec3 lightDir = glm::vec3(-1.0f, -1.0f, 1.0f);
 	Shader lightBoxShader = ResourceManager::LoadShader("shaders/lightandshadow/vs_lightBox.glsl", "shaders/lightandshadow/fs_lightBox.glsl", nullptr, "lightBoxShader");
 
 	Shadow shadow;
@@ -118,9 +121,14 @@ int main()
 	character chter;
 
 	Shader modelShader = ResourceManager::LoadShader("shaders/model/vs_model.glsl", "shaders/model/fs_model.glsl", nullptr, "modelShader");
-  Model house("res/models/house/house.obj");
-  Model tree("res/models/201082874427109/tree.obj");
-  Model boy("res/models/cartoon_boy_obj/boy.obj");
+	Model house("res/models/house/house.obj");
+	Model tree("res/models/201082874427109/tree.obj");
+	Model boy("res/models/cartoon_boy_obj/boy.obj");
+
+	vector<Model> models;
+	models.push_back(house);
+	models.push_back(tree);
+	models.push_back(boy);
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -138,7 +146,7 @@ int main()
 		glm::mat4 skyboxView = glm::mat3(view);
 		glm::mat4 projection = glm::mat4(1.0f);
 		projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
-		
+
 
 		glEnable(GL_CLIP_DISTANCE0);
 		glBindFramebuffer(GL_FRAMEBUFFER, water.reflectionBuffer);
@@ -177,15 +185,17 @@ int main()
 		glClear(GL_DEPTH_BUFFER_BIT);
 		shadow.depthShader.Use();
 		shadow.depthShader.SetMatrix4("lightSpaceMatrix", lightSpaceMatrix);
+	
 
 		island.DrawDepthMap(lightSpaceMatrix, shadow.depthShader);
+		drawDepthShader(lightSpaceMatrix, shadow.depthShader, models);
 
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		
+
 
 		water.drawOcean(view, projection, glfwGetTime(), lightSpaceMatrix, shadow.depthMap, lightDir, lightColor, camera.position);
 
@@ -193,61 +203,69 @@ int main()
 
 		skybox.drawSkyBox(skyboxView);
 
+		
+
+		// load model
+		modelShader.use();
+		glUniform1i(glGetUniformLocation(modelShader.ID, "shadowMap"), 1);
+
+		modelShader.SetMatrix4("lightSpaceMatrix", lightSpaceMatrix);
+
+		/*modelShader.SetVector3f("light.position", lightPos);
+		modelShader.SetVector3f("viewPos", camera.position);
+		modelShader.SetVector3f("light.color", lightColor);*/
+
+		modelShader.SetVector3f("lightPos", lightPos);
+		modelShader.SetVector3f("viewPos", camera.position);
+		modelShader.SetBool("shadows", true);
+		// light properties
+		/*modelShader.SetVector3f("light.ambient", 0.2f, 0.2f, 0.2f);
+		modelShader.SetVector3f("light.diffuse", 0.5f, 0.5f, 0.5f);
+		modelShader.SetVector3f("light.specular", 1.0f, 1.0f, 1.0f);
+		modelShader.SetFloat("light.constant", 1.0f);
+		modelShader.SetFloat("light.linear", 0.09f);
+		modelShader.SetFloat("light.quadratic", 0.032f);
+		// material properties
+		modelShader.SetFloat("light.shininess", 32.0f);*/
+
+		// view/projection transformations
+		glm::mat4 projection2 = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
+		glm::mat4 view2 = camera.getViewMatrix();
+		modelShader.SetMatrix4("projection", projection2);
+		modelShader.SetMatrix4("view", view2);
+		//modelShader.updateView(fov, SRC_WIDTH, SRC_HEIGHT, camera->GetViewMatrix(), false);
+
+		// render the loaded model
+		glm::mat4 model2 = glm::mat4(1.0f);
+		model2 = glm::translate(model2, glm::vec3(0.0f, 3.8f, 0.0f)); // translate it down so it's at the center of the scene
+		model2 = glm::scale(model2, glm::vec3(0.04f, 0.04f, 0.04f));  // it's a bit too big for our scene, so scale it down
+		modelShader.SetMatrix4("model", model2);
+		house.Draw(modelShader);
+
+		model2 = glm::mat4(1.0f);
+		model2 = glm::translate(model2, glm::vec3(10.0f, 2.0f, 5.0f)); // translate it down so it's at the center of the scene
+		model2 = glm::scale(model2, glm::vec3(0.0015f, 0.0015f, 0.0015f));  // it's a bit too big for our scene, so scale it down
+		modelShader.SetMatrix4("model", model2);
+		tree.Draw(modelShader);
+
+		model2 = glm::mat4(1.0f);
+
+		if (playerMove) {
+			float radius = 10.0f;
+			float camX = sin(glfwGetTime()) * radius;
+			float camZ = cos(glfwGetTime()) * radius;
+			model2 = glm::translate(model2, glm::vec3(camX, 2.0f, camZ));
+		}
+		else {
+			model2 = glm::translate(model2, glm::vec3(20.0f, 1.8f, 0.0f)); // translate it down so it's at the center of the scene
+
+		}
+		model2 = glm::scale(model2, glm::vec3(0.03f, 0.03f, 0.03f));  // it's a bit too big for our scene, so scale it down
+		modelShader.SetMatrix4("model", model2);
+		boy.Draw(modelShader);
+
 		snow.Render(deltaTime, model, view, projection);
 
-    // load model
-    modelShader.use();
-
-    modelShader.SetVector3f("light.position", lightPos);
-    modelShader.SetVector3f("viewPos", camera.position);
-
-    // light properties
-    modelShader.SetVector3f("light.ambient", 0.2f, 0.2f, 0.2f);
-    modelShader.SetVector3f("light.diffuse", 0.5f, 0.5f, 0.5f);
-    modelShader.SetVector3f("light.specular", 1.0f, 1.0f, 1.0f);
-    modelShader.SetFloat("light.constant", 1.0f);
-    modelShader.SetFloat("light.linear", 0.09f);
-    modelShader.SetFloat("light.quadratic", 0.032f);
-    // material properties
-    modelShader.SetFloat("light.shininess", 32.0f);
-
-    // view/projection transformations
-    glm::mat4 projection2 = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
-    glm::mat4 view2 = camera.getViewMatrix();
-    modelShader.SetMatrix4("projection", projection2);
-    modelShader.SetMatrix4("view", view2);
-    //modelShader.updateView(fov, SRC_WIDTH, SRC_HEIGHT, camera->GetViewMatrix(), false);
-
-    // render the loaded model
-    glm::mat4 model2 = glm::mat4(1.0f);
-    model2 = glm::translate(model2, glm::vec3(0.0f, 3.8f, 0.0f)); // translate it down so it's at the center of the scene
-    model2 = glm::scale(model2, glm::vec3(0.04f, 0.04f, 0.04f));  // it's a bit too big for our scene, so scale it down
-    modelShader.SetMatrix4("model", model2);
-    house.Draw(modelShader);
-
-    model2 = glm::mat4(1.0f);
-    model2 = glm::translate(model2, glm::vec3(10.0f, 1.8f, 5.0f)); // translate it down so it's at the center of the scene
-    model2 = glm::scale(model2, glm::vec3(0.0015f, 0.0015f, 0.0015f));  // it's a bit too big for our scene, so scale it down
-    modelShader.SetMatrix4("model", model2);
-    tree.Draw(modelShader);
-
-    model2 = glm::mat4(1.0f);
-
-    if (playerMove) {
-      float radius = 10.0f;
-      float camX = sin(glfwGetTime()) * radius;
-      float camZ = cos(glfwGetTime()) * radius;
-      model2 = glm::translate(model2, glm::vec3(camX, 5.8f, camZ));
-    }
-    else {
-      model2 = glm::translate(model2, glm::vec3(20.0f, 5.8f, 0.0f)); // translate it down so it's at the center of the scene
-
-    }
-    model2 = glm::scale(model2, glm::vec3(0.03f, 0.03f, 0.03f));  // it's a bit too big for our scene, so scale it down
-    modelShader.SetMatrix4("model", model2);
-    boy.Draw(modelShader);
-    
-	
 
 
 		string s = to_string(1.0 / deltaTime);
@@ -387,11 +405,11 @@ void renderCube()
 			-1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
 			-1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f  // bottom-left 
 			- 1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
-			
-			
-			
-			   
-			       
+
+
+
+
+
 		};
 		glGenVertexArrays(1, &cubeVAO);
 		glGenBuffers(1, &cubeVBO);
@@ -415,5 +433,35 @@ void renderCube()
 	glBindVertexArray(0);
 }
 
-	
+void drawDepthShader(glm::mat4 lightSpaceMatrix, Shader& depthShader, vector<Model> v) {
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	depthShader.Use();
+	depthShader.SetMatrix4("lightSpaceMatrix", lightSpaceMatrix);
+
+	//bamboo
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(0.0f, 3.8f, 0.0f)); // translate it down so it's at the center of the scene
+	model = glm::scale(model, glm::vec3(0.04f, 0.04f, 0.04f));    // it's a bit too big for our scene, so scale it down
+	depthShader.SetMatrix4("model", model);
+	v[0].Draw(depthShader);
+
+	//bamboo2
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(10.0f, 2.0f, 5.0f)); // translate it down so it's at the center of the scene
+	model = glm::scale(model, glm::vec3(0.0015f, 0.0015f, 0.0015f));  // it's a bit too big for our scene, so scale it down
+	depthShader.SetMatrix4("model", model);
+	v[1].Draw(depthShader);
+
+	//house
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(20.0f, 1.8f, 0.0f)); // translate it down so it's at the center of the scene
+	model = glm::scale(model, glm::vec3(0.03f, 0.03f, 0.03f));
+	depthShader.SetMatrix4("model", model);
+	v[2].Draw(depthShader);
+}
+
+
 

@@ -19,8 +19,8 @@ public:
 	void initShadow() {
 		this->depthShader = ResourceManager::LoadShader("shaders/lightandshadow/vs_shadowDepth.glsl",
 			"shaders/lightandshadow/fs_shadowDepth.glsl", nullptr, "shadowDepthShader");
-		this->shadowWidth = 1024;
-		this->shadowHeight = 1024;
+		this->shadowWidth = 1280;
+		this->shadowHeight = 720;
 
 		// framebuffer
 		glGenFramebuffers(1, &depthMapFBO);
@@ -42,5 +42,6 @@ public:
 		glDrawBuffer(GL_NONE);
 		glReadBuffer(GL_NONE);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	}
 };
