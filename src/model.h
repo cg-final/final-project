@@ -21,7 +21,7 @@
 #include <vector>
 using namespace std;
 
-unsigned int TextureFromFile(const char *path, const string &directory, bool gamma = false);
+static unsigned int TextureFromFile(const char *path, const string &directory, bool gamma = false);
 
 class Model
 {
@@ -34,6 +34,8 @@ public:
 
 	/*  Functions   */
 	// constructor, expects a filepath to a 3D model.
+	Model() {}
+
 	Model(string const &path, bool gamma = false) : gammaCorrection(gamma)
 	{
 		loadModel(path);

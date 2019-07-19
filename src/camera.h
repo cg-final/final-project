@@ -10,8 +10,18 @@
 //#define GLM_ENABLE_EXPERIMENTAL
 //#include <glm/gtx/string_cast.hpp>
 
+enum Movement {
+	FORWARD,
+	BACKWARD,
+	LEFT,
+	RIGHT
+};
+
 class Camera {
 public:
+	Camera() : position(position), worldup(worldup), front(glm::vec3(0.0, 0.0, -1.0)), 
+		up(worldup), keyboardVelocity(10.0), mouseVelocity(0.1) {}
+
 	Camera(glm::vec3 position, glm::vec3 worldup) : position(position), worldup(worldup), 
 		front(glm::vec3(0.0, 0.0, -1.0)), up(worldup), keyboardVelocity(10.0), mouseVelocity(0.1) 
 	{
@@ -58,7 +68,7 @@ public:
 	}
 
 	glm::vec3 position;
-private:
+
 	glm::vec3	worldup;
 	glm::vec3	front, up, right;
 	GLfloat		keyboardVelocity, mouseVelocity;
