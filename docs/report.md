@@ -238,13 +238,131 @@
     + 运行截图：
     ![](image/water.png)
 
++ 模型加载
+    + 依照LearnOpenGL上的教程，使用Assimp库载入模型
+    + 这里主要用到两个类，第一个是Model类，另外一个是Mesh类；在Model类中我们使用Assimp加载模型，然后将其转换成多个Mesh类对象，在Mesh类对象中，我们将数据变成opengl可以理解的格式，然后再进行渲染；  
+        Model.h  
+        ```
+        class Model 
+        {
+            public:
+                /*  函数   */
+                Model(char *path)
+                {
+                    loadModel(path);
+                }
+                void Draw(Shader shader);   
+            private:
+                /*  模型数据  */
+                vector<Mesh> meshes;
+                string directory;
+                /*  函数   */
+                void loadModel(string path);
+                void processNode(aiNode *node, const aiScene *scene);
+                Mesh processMesh(aiMesh *mesh, const aiScene *scene);
+                vector<Texture> loadMaterialTextures(aiMaterial *mat, aiTextureType type, 
+                                                    string typeName);
+        };
+        ```
+        Mesh.h  
+        ```
+        class Mesh {
+            public:
+                /*  网格数据  */
+                vector<Vertex> vertices;
+                vector<unsigned int> indices;
+                vector<Texture> textures;
+                /*  函数  */
+                Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures);
+                void Draw(Shader shader);
+            private:
+                /*  渲染数据  */
+                unsigned int VAO, VBO, EBO;
+                /*  函数  */
+                void setupMesh();
+        };  
+        ```
+    + 运行效果
+    ![](image/model1.png)  
+    ![](image/model2.png)  
+
++ 摄像机
+    + 摄像机系统有两个模式，第一个模式是自由观察模式，摄像机可以在场景中自由移动，而场景中的物体不动；另外一个模式则是摄像机始终跟随在人物模型后方，随着人物的移动摄像机也跟着移动。
+    + 两个模式的实现其实是差不多的，只不过是自由观察模式中，按键移动的直接是摄像机的位置坐标，而跟随模式中，按键移动的是人物，然后在根据人物的位置来计算摄像机的位置。  
+    + 摄像机类主要是参照LearnOpenGL上的实现方法
+        ```
+        void Player::rotate(GLfloat dpitch, GLfloat dyaw, Camera &camera) {
+            yaw += dyaw * MouseSensitivity;
+            camera.yaw = yaw;
+            camera.pitch += dpitch * MouseSensitivity;
+
+            if (camera.pitch > 89.0f)
+                camera.pitch = 89.0f;
+            if (camera.pitch < -89.0f)
+                camera.pitch = -89.0f;
+
+            camera.updateCameraVectors();
+            rotation = 90 - yaw;
+
+            updateCameraVectors();
+        }
+
+        ...
+
+        if (!threeView) {
+            camera.position = position + glm::vec3(0.0f, 2.0f, 0.0f) - 4.0f * front;
+        }
+        ```
+    + 运行效果
+        ![](image/camera.gif)  
+
++ 光照与阴影
+    + 光照使用phong光照模型，阴影就是阴影映射，跟之前做过的作业基本一样，直接用之前作业的稍作修改就可以了，在这里就不多介绍了。  
+
+
++ 重力系统  
+    + 重力系统主要体现在人物能沿着小岛走动、跳跃以及下落，实现也比较简单，给定一个重力加速度G，在起跳的时候给人物一个Y轴上的初速度，然后根据牛顿定理计算每一帧人物的y轴位置即可。  
+    + 因为小岛是稍微隆起的，并不是一片平地，所以人物在小岛上走动时，人物模型在y轴上的位置也会随之变化，实现的方法就是在人物移动时，根据人物的x和z轴坐标，在地形的高度图上找到相应的高度信息，然后改变人物的坐标位置。不过这样实现后，会造成人物移动时存在抖动的情况，因为高度图的信息是离散的，即相邻坐标的高度不是连续的，所以人物在移动的时候高度就会突变，造成人物的抖动。  
+        ```
+        // 根据x和z轴坐标从高度图中获取y轴高度
+        int x = round(position.x * 10) + 400;
+        int z = round(position.z * 10) + 400;
+        float h = image[3 * (z * width + x)];
+        floorY = h / 10 - 1;
+
+        ...
+
+        void Player::jump() {
+            if (!isFlying) {
+                velocityY = 7.0f;
+            }
+            isFlying = true;
+        }
+
+        void Player::fall(float dt) {
+            position.y += (velocityY * dt + G * dt * dt / 2);
+            velocityY += G * dt;
+            if (position.y <= floorY) {
+                position.y = floorY;
+                velocityY = 0.0f;
+                isFlying = false;
+            }
+        }
+        ```
+    + 运行效果
+        ![](image/gravity.gif)  
+
+
 ## 小组分工及贡献
 
 |姓名|完成内容|
 |---|---|
 |韩智慧|天空盒、地形加载、文字显示、粒子系统、抗锯齿、流体模拟等相关部分的代码完成以及实现报告相关内容的书写完成|
-|何昶兴||
+|何昶兴|摄像机、光照与阴影、模型相关、重力系统|
 
 ## 个人总结
 + 韩智慧：
     + 本学期的期末项目我主要完成了项目的天空盒、地形加载、文字显示、粒子系统、抗锯齿、流体模拟等内容，通过之前作业的学习和通过对他人博客的阅读和学习，完成了项目内容。通过一学期的学习和期末项目的完成，使我对计算机图形学相关的内容有了一些了解和认知，通过作业和项目对opengl的使用，让我对opengl有了更多的了解和使用经验。通过一学期的学习使我收获了很多。
+
++ 何昶兴：
+    + 在进行这次的期末项目过程中，有很多是之前的作业做过的一些内容，基本上稍微改一下就可以拿来用了，不过同时也还有很多是之前没做过的东西，在实现这部分的内容时也遇到了不少的问题以及bug，在查找问题的来源和解决问题、修复bug的过程中，通过查找官方文档、博客、源码等，学习到了不少新的知识，同时也加深了自己对于opengl的理解和使用。
