@@ -18,14 +18,15 @@
 #include "snow.h"
 #include "character.cpp"
 #include "model.h"
+#include "player.h"
 
 #include <iostream>
 #include <vector>
 #include <string>
 
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
+//#include "imgui/imgui.h"
+//#include "imgui/imgui_impl_glfw.h"
+//#include "imgui/imgui_impl_opengl3.h"
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -43,6 +44,7 @@ void renderCube();
 void drawDepthShader(glm::mat4 lightSpaceMatrix, Shader& depthShader, vector<Model> v);
 
 Camera camera(glm::vec3(0.0, 10.0, 30.0), glm::vec3(0.0, 1.0, 0.0));
+Player *player;
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -50,6 +52,7 @@ float lastX, lastY;
 bool firstMouse = true;
 bool ssnow = false;
 bool playerMove = false;
+bool threeView = true; 
 
 int main()
 {
@@ -80,13 +83,13 @@ int main()
 	}
 	glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 
-	ImGui::CreateContext();
+	/*ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
 	(void)io;
 	ImGui::StyleColorsDark();
 
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
-	ImGui_ImplOpenGL3_Init(glsl_version);
+	ImGui_ImplOpenGL3_Init(glsl_version);*/
 
 	
 	glEnable(GL_MULTISAMPLE);
@@ -129,6 +132,10 @@ int main()
 	models.push_back(house);
 	models.push_back(tree);
 	models.push_back(boy);
+
+	ResourceManager::LoadModel("res/models/cartoon_boy_obj/boy.obj", "boy");
+
+	player = new Player("boy");
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -237,7 +244,7 @@ int main()
 
 		// render the loaded model
 		glm::mat4 model2 = glm::mat4(1.0f);
-		model2 = glm::translate(model2, glm::vec3(0.0f, 3.8f, 0.0f)); // translate it down so it's at the center of the scene
+		model2 = glm::translate(model2, glm::vec3(0.0f, 3.5f, 0.0f)); // translate it down so it's at the center of the scene
 		model2 = glm::scale(model2, glm::vec3(0.04f, 0.04f, 0.04f));  // it's a bit too big for our scene, so scale it down
 		modelShader.SetMatrix4("model", model2);
 		house.Draw(modelShader);
@@ -249,20 +256,28 @@ int main()
 		tree.Draw(modelShader);
 
 		model2 = glm::mat4(1.0f);
+		
+		player->viewChange(threeView);
+		player->render(modelShader, camera, deltaTime);
+		//if (threeView) {
+		//	//model2 = glm::translate(model2, glm::vec3(20.0f, 1.8f, 0.0f)); // translate it down so it's at the center of the scene
+		//	//model2 = glm::scale(model2, glm::vec3(0.03f, 0.03f, 0.03f));  // it's a bit too big for our scene, so scale it down
+		//	//modelShader.SetMatrix4("model", model2);
+		//	//boy.Draw(modelShader);
+		//	//player->position = glm::vec3(20.0f, 1.8f, 0.0f);
+		//	player->viewChange(threeView);
+		//}
+		//else {
+		//	model2 = glm::translate(model2, glm::vec3(20.0f, 1.8f, 0.0f)); // translate it down so it's at the center of the scene
+		//	model2 = glm::rotate(model2, glm::radians(180.0f), glm::vec3(0.0, 1.0, 0.0));
+		//	model2 = glm::scale(model2, glm::vec3(0.03f, 0.03f, 0.03f));  // it's a bit too big for our scene, so scale it down
+		//	modelShader.SetMatrix4("model", model2);
+		//	boy.Draw(modelShader);
 
-		if (playerMove) {
-			float radius = 10.0f;
-			float camX = sin(glfwGetTime()) * radius;
-			float camZ = cos(glfwGetTime()) * radius;
-			model2 = glm::translate(model2, glm::vec3(camX, 2.0f, camZ));
-		}
-		else {
-			model2 = glm::translate(model2, glm::vec3(20.0f, 1.8f, 0.0f)); // translate it down so it's at the center of the scene
+		//	camera.position = glm::vec3(20.0f, 1.8f, 0.0f) + glm::vec3(0.0f, 2.0f, 0.0f) - camera.front * 5.0f;
 
-		}
-		model2 = glm::scale(model2, glm::vec3(0.03f, 0.03f, 0.03f));  // it's a bit too big for our scene, so scale it down
-		modelShader.SetMatrix4("model", model2);
-		boy.Draw(modelShader);
+		//}
+
 
 		snow.Render(deltaTime, model, view, projection);
 
@@ -295,20 +310,56 @@ void processInput(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.moveForward(deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera.moveRight(deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.moveBack(deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera.moveLeft(deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+		if (threeView) {
+			camera.moveForward(deltaTime);
+		}
+		else {
+			player->move(FORWARD, deltaTime);
+		}
+	}
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+		if (threeView) {
+			camera.moveRight(deltaTime);
+		}
+		else {
+			player->move(RIGHT, deltaTime);
+		}
+	}
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+		if (threeView) {
+			camera.moveBack(deltaTime);
+		}
+		else {
+			player->move(BACKWARD, deltaTime);
+		}
+	}
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+		if (threeView) {
+			camera.moveLeft(deltaTime);
+		}
+		else {
+			player->move(LEFT, deltaTime);
+		}
+	}
 	if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS)
 		ssnow = true;
 	if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS)
 		ssnow = false;
+	if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS)
+		threeView = true;
+	if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS) {
+		threeView = false;
+		camera.position = player->position + glm::vec3(0.0f, 2.0f, 0.0f) - player->front * 5.0f;
+	}
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+		if (!threeView)
+			player->jump();
+	}
+		
+		
 }
-
+ 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
 	if (firstMouse)
@@ -323,7 +374,13 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	lastX = xpos;
 	lastY = ypos;
 
-	camera.rotate(yoffset, xoffset);
+	if (threeView) {
+		camera.rotate(yoffset, xoffset);
+	}
+	else {
+		player->rotate(yoffset, xoffset, camera);
+	}
+	
 }
 
 unsigned int quadVAO = 0;
